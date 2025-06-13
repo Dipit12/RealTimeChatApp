@@ -20,19 +20,24 @@ app.get("/", (req, res) => {
     res.json({msg:"Server is up"})
 })
 
-io.on("connection", (socket : Socket) =>{
-    console.log("User connected")
+io.on("connection", (socket: Socket) => {
+    console.log("User connected", socket.id);
 
-    socket.on("disconnect", () =>{
-        console.log(`Socker disconnected ${socket.id}`)
-    })
-    socket.on("chatMessage", (msg:String) =>{
-        console.log(msg)
-        io.emit("receivedMsg",msg); // to broadcast to all the sockets in the circuit
-    })
+    socket.on("join-room", (roomID: string) => {
+        socket.join(roomID);
+        console.log(`User ${socket.id} joined room ${roomID}`);
+        socket.to(roomID).emit("receivedMsg", `User ${socket.id} joined the room`);
+    });
 
-    io.emit("randomMsg","hello")
-})
+    socket.on("chatMessage", ({ roomID, message }: { roomID: string, message: string }) => {
+        console.log(`Room ${roomID} | ${message}`);
+        io.to(roomID).emit("receivedMsg", message);
+    });
+
+    socket.on("disconnect", () => {
+        console.log(`Socket disconnected ${socket.id}`);
+    });
+});
 
 server.listen(PORT, () =>{
     console.log(`Server is listening on port ${PORT}`)
